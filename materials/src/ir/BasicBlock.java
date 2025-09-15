@@ -16,6 +16,26 @@ public class BasicBlock {
         this.blockId = blockId;
     }
 
+    public boolean isEmpty() {
+        return instructions.isEmpty();
+    }
+
+    public void add(IRInstruction instr) {
+        this.instructions.add(instr);
+    }
+
+    public IRInstruction getLastInstruction() {
+        return instructions.get(instructions.size() - 1);
+    }
+
+    public void addSuccessor(BasicBlock block) {
+        this.successors.add(block);
+    }
+
+    public void addPredecessor(BasicBlock block) {
+        this.predecessors.add(block);
+    }
+
     public List<IRInstruction> getInstructions() {
         return instructions;
     }
