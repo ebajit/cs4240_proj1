@@ -1,2 +1,5 @@
-materials/build/
+materials/build/*
 materials/out.ir
+project1_submission
+design.md
+test_public.sh

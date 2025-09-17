@@ -1,6 +1,10 @@
 package ir;
 
+import ir.operand.IRConstantOperand;
+import ir.operand.IRFunctionOperand;
+import ir.operand.IRLabelOperand;
 import ir.operand.IROperand;
+import ir.operand.IRVariableOperand;
 
 public class IRInstruction {
 
@@ -26,12 +30,61 @@ public class IRInstruction {
 
     public int irLineNumber;
 
+    public boolean marked; // Needed to keep track of instructions in dead code elimination
+
     public IRInstruction() {}
 
     public IRInstruction(OpCode opCode, IROperand[] operands, int irLineNumber) {
         this.opCode = opCode;
         this.operands = operands;
         this.irLineNumber = irLineNumber;
+        this.marked = false;
     }
 
+    // Get the assigned variable
+    public IRVariableOperand getAssignedVariable() {
+        if (operands.length > 0 && operands[0] instanceof IRVariableOperand) {
+            return (IRVariableOperand) operands[0];
+        }
+        return null;
+    }
+
+    // Check if the instruction is definition
+    public boolean isDefinition() {
+        return this.opCode == OpCode.ASSIGN || this.opCode == OpCode.ADD || this.opCode == OpCode.SUB || 
+               this.opCode == OpCode.MULT || this.opCode == OpCode.DIV || this.opCode == OpCode.AND ||
+               this.opCode == OpCode.OR || this.opCode == OpCode.CALLR || this.opCode == OpCode.ARRAY_LOAD;
+    }
+
+    // Need to add this since it doesn't already exist in IRInstruction
+    public boolean isCritical() {
+        return this.opCode == OpCode.GOTO || this.opCode == OpCode.BREQ || this.opCode == OpCode.BRNEQ || 
+               this.opCode == OpCode.BRLT || this.opCode == OpCode.BRGT || this.opCode == OpCode.BRGEQ ||
+               this.opCode == OpCode.RETURN || this.opCode == OpCode.CALLR || this.opCode == OpCode.CALL ||
+               this.opCode == OpCode.ARRAY_STORE || this.opCode == OpCode.LABEL;
+    }
+
+    public String toString() {
+        String res = Integer.toString(irLineNumber) + ". ";;
+        if (opCode != OpCode.LABEL) {
+            res += opCode.toString() + ", ";
+        }
+        for (IROperand op : operands) {
+            if (op instanceof IRVariableOperand) {
+                res += ((IRVariableOperand)op).getName();
+            } else if (op instanceof IRConstantOperand) {
+                res += ((IRConstantOperand)op).getValueString();
+            } else if (op instanceof IRLabelOperand) {
+                res += ((IRLabelOperand)op).getName();
+            } else if (op instanceof IRFunctionOperand) {
+                res += ((IRFunctionOperand)op).getName();
+            } else {
+                res += "Unknown Operand Type";
+                break;
+            }
+            res += ", ";
+        }
+        res = res.substring(0, res.length() - 2);
+        return res;
+    }
 }

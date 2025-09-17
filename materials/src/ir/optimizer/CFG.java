@@ -1,108 +1,154 @@
 package ir.optimizer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 import ir.BasicBlock;
 import ir.IRFunction;
 import ir.IRInstruction;
 import ir.IRInstruction.OpCode;
 import ir.operand.IRLabelOperand;
+import ir.operand.IROperand;
+import ir.operand.IRVariableOperand;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 public class CFG {
-   private List<BasicBlock> blocks;
-   private Map<String, BasicBlock> labelMap;
-   private IRFunction parent;
+   private List<BasicBlock> basicBlockList;
+   private Map<String, BasicBlock> labelToBlockMap;
+   private IRFunction parentFunc;
 
+   /**
+    * Constructs a control flow graph from the given IR function.
+    * Transforms linear instruction sequence into connected basic blocks.
+    * 
+    * @param function the IR function to convert into a CFG
+    */
    public CFG(IRFunction function) {
-      this.parent = function;
-      this.labelMap = new HashMap<>();
-      this.blocks = new ArrayList<>();
+      this.parentFunc = function;
+      this.labelToBlockMap = new HashMap<>();
+      this.basicBlockList = new ArrayList<>();
       createCFG(function);
    }
 
    /**
-    * Iterates through each instruction in the passed in IRFunction object
-    * to create basic blocks and linked them to each other.
-    * @param function
+    * Builds the control flow graph by partitioning instructions into basic blocks
+    * and establishing control flow connections between them.
+    * 
+    * @param function the source IR function
     */
    private void createCFG(IRFunction function) {
-      // initialize start block
-      int blockId = 0;
-      BasicBlock currBlock = new BasicBlock(blockId);
+      int blockCounter = 0;
+      BasicBlock currBlock = new BasicBlock(blockCounter);
       currBlock.setLabel("start");
-      labelMap.put(currBlock.getLabel(), currBlock);
-
-      // Loop thru each instruction in the IRFunction
-      for (IRInstruction instr: function.instructions) {
-         OpCode op = instr.opCode;
-         if (op == OpCode.LABEL) {
+      labelToBlockMap.put(currBlock.getLabel(), currBlock);
+      for (IRInstruction currInstr: function.instructions) {
+         OpCode currOp = currInstr.opCode;
+         if (currOp == OpCode.LABEL) {
             if (!currBlock.isEmpty()) {
-               blocks.add(currBlock);
-               blockId++;
-               currBlock = new BasicBlock(blockId);
+               basicBlockList.add(currBlock);
+               blockCounter++;
+               currBlock = new BasicBlock(blockCounter);
             }
-            currBlock.setLabel(instr.operands[0].toString());
-            labelMap.put(currBlock.getLabel(), currBlock);
+            currBlock.setLabel(currInstr.operands[0].toString());
+            labelToBlockMap.put(currBlock.getLabel(), currBlock);
          }
-         currBlock.add(instr);
-         if (controlFlowCheck(instr)) {
-            blocks.add(currBlock);
-            blockId++;
-            currBlock = new BasicBlock(blockId);
+         currBlock.add(currInstr);
+         if (controlFlowCheck(currInstr)) {
+            basicBlockList.add(currBlock);
+            blockCounter++;
+            currBlock = new BasicBlock(blockCounter);
          }
       }
-      // Check if curr block empty and add if not empty
       if (!currBlock.isEmpty()) {
-         blocks.add(currBlock);
+         basicBlockList.add(currBlock);
       }
-
-      // Connect blocks to build cfg
-      connectBlocks();
+      createBlockLinks();
    }
 
-   private void connectBlocks() {
-      for (int i = 0; i < blocks.size(); i++) {
-         BasicBlock currBlock = blocks.get(i);
+   /**
+    * Creates predecessor and successor relationships between basic blocks
+    * based on control flow instructions and fall-through behavior.
+    */
+   private void createBlockLinks() {
+      for (int blockIndex = 0; blockIndex < basicBlockList.size(); blockIndex++) {
+         BasicBlock currBlock = basicBlockList.get(blockIndex);
          IRInstruction lastInstr = currBlock.getLastInstruction();
-         OpCode lastOp = lastInstr.opCode;
-
-         if (lastOp == OpCode.GOTO) {
-            String label = ((IRLabelOperand) lastInstr.operands[0]).getName();
-            currBlock.addSuccessor(labelMap.get(label));
-            labelMap.get(label).addPredecessor(currBlock);
-         } else if (branchOpCheck(lastOp)) {
-            String label = ((IRLabelOperand) lastInstr.operands[0]).getName();
-            currBlock.addSuccessor(labelMap.get(label));
-            labelMap.get(label).addPredecessor(currBlock);
-            if (i + 1 < blocks.size()) {
-               currBlock.addSuccessor(blocks.get(i + 1));
-               blocks.get(i + 1).addPredecessor(currBlock);
+         OpCode terminalOp = lastInstr.opCode;
+         if (terminalOp == OpCode.GOTO) {
+            String targetLabel = ((IRLabelOperand) lastInstr.operands[0]).getName();
+            currBlock.addSuccessor(labelToBlockMap.get(targetLabel));
+            labelToBlockMap.get(targetLabel).addPredecessor(currBlock);
+         } else if (branchOpCheck(terminalOp)) {
+            String branchLabel = ((IRLabelOperand) lastInstr.operands[0]).getName();
+            currBlock.addSuccessor(labelToBlockMap.get(branchLabel));
+            labelToBlockMap.get(branchLabel).addPredecessor(currBlock);
+            if (blockIndex + 1 < basicBlockList.size()) {
+               currBlock.addSuccessor(basicBlockList.get(blockIndex + 1));
+               basicBlockList.get(blockIndex + 1).addPredecessor(currBlock);
             }
-         } else if (lastOp != OpCode.RETURN && i + 1 < blocks.size()) {
-            currBlock.addSuccessor(blocks.get(i+1));
-            blocks.get(i+1).addPredecessor(currBlock);
+         } else if (terminalOp != OpCode.RETURN && blockIndex + 1 < basicBlockList.size()) {
+            currBlock.addSuccessor(basicBlockList.get(blockIndex + 1));
+            basicBlockList.get(blockIndex + 1).addPredecessor(currBlock);
          }
       }
    }
 
    /**
-    * Helper method for checking any type of control flow operation
-    * @param instr the input instruction
-    * @return boolean value, true if instruction is control flow
+    * Determines if an instruction terminates a basic block by transferring control.
+    * 
+    * @param instr the instruction to examine
+    * @return true if the instruction ends a basic block
     */
    private boolean controlFlowCheck(IRInstruction instr) {
-      OpCode opcode = instr.opCode;
-      return opcode == OpCode.BREQ || opcode == OpCode.BRNEQ || opcode == OpCode.BRLT || opcode == OpCode.BRGT || opcode == OpCode.BRGEQ || opcode == OpCode.GOTO;
+      OpCode instrCode = instr.opCode;
+      return instrCode == OpCode.BREQ || instrCode == OpCode.BRNEQ || instrCode == OpCode.BRLT || instrCode == OpCode.BRGT || instrCode == OpCode.BRGEQ || instrCode == OpCode.GOTO;
    }
 
    /**
-    * Helper method for checking BRANCH only control flow
-    * @param op input instruction
-    * @return boolean value, true if instruction is branch
+    * Checks if an operation code represents a conditional branch instruction.
+    * 
+    * @param opCode the operation code to check
+    * @return true if the operation is a conditional branch
     */
-   private boolean branchOpCheck(OpCode op) {
-      return op == OpCode.BREQ || op == OpCode.BRNEQ || op == OpCode.BRLT || op == OpCode.BRGT || op == OpCode.BRGEQ; 
+   private boolean branchOpCheck(OpCode opCode) {
+      return opCode == OpCode.BREQ || opCode == OpCode.BRNEQ || opCode == OpCode.BRLT || opCode == OpCode.BRGT || opCode == OpCode.BRGEQ; 
+   }
+
+   /**
+    * Reconstructs an IR function from the optimized control flow graph.
+    * Flattens basic blocks back into a linear instruction sequence.
+    * 
+    * @return new IR function with optimized instruction sequence
+    */
+   public IRFunction CFGToIRFunction() {
+      List<IRInstruction> reconstructedInstrs = new ArrayList<>();
+      List<IRVariableOperand> collectedVars = new ArrayList<>();
+      Set<IRVariableOperand> uniqueVarSet = new HashSet<>();
+      IRFunction resultFunc = new IRFunction(parentFunc.name, parentFunc.returnType, parentFunc.parameters, parentFunc.variables, reconstructedInstrs);
+      for (BasicBlock currBlock : basicBlockList) {
+         for (IRInstruction currInstr : currBlock.getInstructions()) {
+            reconstructedInstrs.add(currInstr);
+            for (IROperand currOperand : currInstr.operands)
+               if (currOperand instanceof IRVariableOperand) {
+                  if (!uniqueVarSet.contains(currOperand)) {
+                     uniqueVarSet.add((IRVariableOperand) currOperand);
+                     collectedVars.add((IRVariableOperand) currOperand);
+                  }
+               }   
+         }
+      }
+      return resultFunc;
+   }
+
+   /**
+    * Returns the list of basic blocks in this control flow graph.
+    * 
+    * @return list of basic blocks
+    */
+   public List<BasicBlock> getBlocks() {
+      return this.basicBlockList;
    }
 }
