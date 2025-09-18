@@ -58,7 +58,7 @@ public class DeadCode {
     private void markCriticalInstr() {
         for (BasicBlock currBlock : controlFlowGraph.getBlocks()) {
             for (IRInstruction currentInstruction : currBlock.getInstructions()) {
-                if (currentInstruction.isCritical()) {
+                if (currentInstruction.checkIfCriticalInstr()) {
                     currentInstruction.marked = true;
                     worklist.add(currentInstruction);
                 }
@@ -113,7 +113,7 @@ public class DeadCode {
         Set<IRInstruction> reachingDef = instrDefMap.get(instruction);
         Set<IRInstruction> relevantDefs = new HashSet<>();
         for (IRInstruction potentialDef : reachingDef) {
-            if (potentialDef.isDefinition() 
+            if (potentialDef.checkIfDef() 
                 && potentialDef.getAssignedVariable().getName().equals(varName)) {
                 relevantDefs.add(potentialDef);
             }

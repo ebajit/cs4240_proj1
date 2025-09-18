@@ -60,7 +60,7 @@ public class Reaching {
         Map<String, Set<IRInstruction>> variableToDefsMap = new HashMap<>();
         for (BasicBlock currBlock : cfg.getBlocks()) {
             for (IRInstruction currInstr : currBlock.getInstructions()) {
-                if (currInstr.isDefinition()) {
+                if (currInstr.checkIfDef()) {
                     IRVariableOperand definedVar = currInstr.getAssignedVariable();
                     if (definedVar != null) {
                         variableToDefsMap.computeIfAbsent(definedVar.getName(), k -> new HashSet<>()).add(currInstr);
@@ -73,7 +73,7 @@ public class Reaching {
             Set<IRInstruction> generatedDefs = new HashSet<>();
             Set<IRInstruction> killedDefs = new HashSet<>();
             for (IRInstruction currInstr : currBlock.getInstructions()) {
-                if (currInstr.isDefinition()) {
+                if (currInstr.checkIfDef()) {
                     IRVariableOperand definedVar = currInstr.getAssignedVariable();
                     if (definedVar != null) {
                         finalDefPerVariable.put(definedVar.getName(), currInstr);
@@ -145,14 +145,14 @@ public class Reaching {
         for (BasicBlock currBlock : cfg.getBlocks()) {
             Set<IRInstruction> localDefSet = new HashSet<>(inSet.get(currBlock));
             for (IRInstruction currInstr : currBlock.getInstructions()) {
-                if (currInstr.isDefinition()) {
+                if (currInstr.checkIfDef()) {
                     IRVariableOperand definedVar = currInstr.getAssignedVariable();
                     if (!hasCircularRef(currInstr)) {
-                        localDefSet.removeIf(def -> def.isDefinition() && definedVar.getName().equals(def.getAssignedVariable().getName()));
+                        localDefSet.removeIf(def -> def.checkIfDef() && definedVar.getName().equals(def.getAssignedVariable().getName()));
                     }
                 }
                 instrDefMap.put(currInstr, new HashSet<>(localDefSet));
-                if (currInstr.isDefinition()) {
+                if (currInstr.checkIfDef()) {
                     localDefSet.add(currInstr);
                 }
             }
