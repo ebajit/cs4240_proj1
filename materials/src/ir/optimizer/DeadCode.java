@@ -16,10 +16,9 @@ public class DeadCode {
     private CFG controlFlowGraph;
     private Map<IRInstruction, Set<IRInstruction>> instrDefMap;
     private Queue<IRInstruction> worklist;
-    private int removedInstrCount;
 
     /**
-     * Constructs a dead code elimination optimizer for the given control flow graph.
+     * Constructs a Java object that performs dead code elimination for the passed in control flow graph.
      * Uses reaching definitions analysis to identify and remove unreachable code.
      * 
      * @param cfg the control flow graph to optimize
@@ -29,7 +28,6 @@ public class DeadCode {
         this.controlFlowGraph = cfg;
         this.instrDefMap = defToUseMap;
         this.worklist = new LinkedList<>();
-        this.removedInstrCount = 0;
     }
 
     /**
@@ -39,12 +37,10 @@ public class DeadCode {
     public void performDCE() {
         mark();
         sweep();
-        System.out.println("Dead Code Elimination: Removed " + removedInstrCount + " instructions.");
     }
 
     /**
      * Marks all essential instructions and instructions reachable through dependency chains.
-     * Essential instructions include control flow operations, function calls, and side-effect operations.
      */
     private void mark() {
         markCriticalInstr();
@@ -96,8 +92,6 @@ public class DeadCode {
         for (BasicBlock currBlock : controlFlowGraph.getBlocks()) {
             int originalSize = currBlock.getInstructions().size();
             currBlock.getInstructions().removeIf(instruction -> !instruction.marked);
-            int finalSize = currBlock.getInstructions().size();
-            removedInstrCount += (originalSize - finalSize);
         }
     }
 

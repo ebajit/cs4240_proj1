@@ -70,7 +70,7 @@ public class CFG {
 
    /**
     * Creates predecessor and successor relationships between basic blocks
-    * based on control flow instructions and fall-through behavior.
+    * based on control flow instructions.
     */
    private void createBlockLinks() {
       for (int blockIndex = 0; blockIndex < basicBlockList.size(); blockIndex++) {
@@ -97,7 +97,7 @@ public class CFG {
    }
 
    /**
-    * Determines if an instruction terminates a basic block by transferring control.
+    * Determines if an instruction terminates a basic block with a branch or goto instruction.
     * 
     * @param instr the instruction to examine
     * @return true if the instruction ends a basic block
@@ -119,7 +119,6 @@ public class CFG {
 
    /**
     * Reconstructs an IR function from the optimized control flow graph.
-    * Flattens basic blocks back into a linear instruction sequence.
     * 
     * @return new IR function with optimized instruction sequence
     */

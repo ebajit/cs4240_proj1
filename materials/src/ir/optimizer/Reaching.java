@@ -19,8 +19,7 @@ public class Reaching {
     private Map<IRInstruction, Set<IRInstruction>> defUseMap;
 
     /**
-     * Constructs a reaching definitions analyzer for the given control flow graph.
-     * Performs dataflow analysis to compute which definitions reach each instruction.
+     * Constructs a Java Object to do reaching definitions analysis for the given control flow graph.
      * 
      * @param cfg the control flow graph to analyze
      */
@@ -30,7 +29,7 @@ public class Reaching {
 
     /**
      * Executes the complete reaching definitions dataflow analysis algorithm.
-     * Uses the standard iterative approach with gen/kill sets and in/out computation.
+     * Uses the fixed point iterative approach with gen/kill sets and in/out computation.
      * 
      * @param cfg the control flow graph to analyze
      * @return mapping from each instruction to the set of definitions that reach it
@@ -93,7 +92,7 @@ public class Reaching {
 
     /**
      * Performs the iterative fixed-point computation to calculate in and out sets
-     * for each basic block using the standard dataflow equations.
+     * for each basic block using the dataflow equations.
      * 
      * @param cfg the control flow graph
      * @param inSet output parameter for block input sets
@@ -134,7 +133,7 @@ public class Reaching {
 
     /**
      * Maps each individual instruction to the set of definitions that reach it
-     * by processing instructions within each block and maintaining local state.
+     * by processing instructions within each block
      * 
      * @param cfg the control flow graph
      * @param inSet the computed input sets for each block
